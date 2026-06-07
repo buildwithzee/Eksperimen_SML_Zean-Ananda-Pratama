@@ -1,0 +1,55 @@
+name: Automated Data Preprocessing
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'crop_recommendation_raw/**'
+      - 'preprocessing/automate_*.py'
+  workflow_dispatch:  
+
+jobs:
+  preprocessing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas numpy scikit-learn
+
+      - name: Create Output Directory
+        run: |
+          mkdir -p preprocessing/crop_recommendation_preprocessing
+
+      - name: Run Preprocessing Script
+        run: |
+          python preprocessing/automate_Nama-siswa.py \
+            crop_recommendation_raw/crop_recommendation.csv \
+            preprocessing/crop_recommendation_preprocessing/crop_recommendation_processed.csv
+
+      - name: Upload Processed Dataset as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: crop_recommendation_processed
+          path: preprocessing/crop_recommendation_preprocessing/crop_recommendation_processed.csv
+          retention-days: 30
+
+      - name: Commit Processed Dataset Back to Repo
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add preprocessing/crop_recommendation_preprocessing/
+          git diff --staged --quiet || git commit -m "chore: update preprocessed dataset [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
